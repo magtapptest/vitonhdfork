@@ -9,7 +9,6 @@ import torchgeometry as tgm
 from datasets import VITONDataset, VITONDataLoader
 from networks import SegGenerator, GMM, ALIASGenerator
 from utils import gen_noise, load_checkpoint, save_images
-from driver import device
 
 
 def get_opt():
@@ -22,6 +21,7 @@ def get_opt():
     parser.add_argument('--load_width', type=int, default=768)
     parser.add_argument('--shuffle', action='store_true')
 
+    parser.add_argument('--device', type=str, default='cpu')
     parser.add_argument('--dataset_dir', type=str, default='./datasets/')
     parser.add_argument('--dataset_mode', type=str, default='test')
     parser.add_argument('--dataset_list', type=str, default='test_pairs.txt')
@@ -53,7 +53,7 @@ def get_opt():
     return opt
 
 
-def test(opt, seg, gmm, alias):
+def test(opt, seg, gmm, alias, device):
     up = nn.Upsample(size=(opt.load_height, opt.load_width), mode='bilinear')
     gauss = tgm.image.GaussianBlur((15, 15), (3, 3))
     gauss.to(device)
@@ -131,6 +131,7 @@ def test(opt, seg, gmm, alias):
 
 def main():
     opt = get_opt()
+    device = opt.device
     print(opt)
 
     if not os.path.exists(os.path.join(opt.save_dir, opt.name)):
@@ -149,7 +150,7 @@ def main():
     seg.to(device).eval()
     gmm.to(device).eval()
     alias.to(device).eval()
-    test(opt, seg, gmm, alias)
+    test(opt, seg, gmm, alias, device)
 
 
 if __name__ == '__main__':

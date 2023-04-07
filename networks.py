@@ -4,7 +4,6 @@ from torch import nn
 from torch.nn import functional as F
 from torch.nn import init
 from torch.nn.utils.spectral_norm import spectral_norm
-from driver import device
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -355,8 +354,9 @@ class MaskNorm(nn.Module):
 
 
 class ALIASNorm(nn.Module):
-    def __init__(self, norm_type, norm_nc, label_nc):
+    def __init__(self, norm_type, norm_nc, label_nc, device):
         super(ALIASNorm, self).__init__()
+        self.device = device
 
         self.noise_scale = nn.Parameter(torch.zeros(norm_nc))
 
@@ -383,7 +383,7 @@ class ALIASNorm(nn.Module):
     def forward(self, x, seg, misalign_mask=None):
         # Part 1. Generate parameter-free normalized activations.
         b, c, h, w = x.size()
-        noise = (torch.randn(b, w, h, 1).to(device) * self.noise_scale).transpose(1, 3)
+        noise = (torch.randn(b, w, h, 1).to(self.device) * self.noise_scale).transpose(1, 3)
 
         if misalign_mask is None:
             normalized = self.param_free_norm(x + noise)
@@ -425,10 +425,11 @@ class ALIASResBlock(nn.Module):
             subnorm_type = 'aliasmask'
             semantic_nc = semantic_nc + 1
 
-        self.norm_0 = ALIASNorm(subnorm_type, input_nc, semantic_nc)
-        self.norm_1 = ALIASNorm(subnorm_type, middle_nc, semantic_nc)
+        device = opt.device
+        self.norm_0 = ALIASNorm(subnorm_type, input_nc, semantic_nc, device=device)
+        self.norm_1 = ALIASNorm(subnorm_type, middle_nc, semantic_nc, device=device)
         if self.learned_shortcut:
-            self.norm_s = ALIASNorm(subnorm_type, input_nc, semantic_nc)
+            self.norm_s = ALIASNorm(subnorm_type, input_nc, semantic_nc, device=device)
 
         self.relu = nn.LeakyReLU(0.2)
 
